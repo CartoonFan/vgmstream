@@ -96,12 +96,12 @@ class LogHelper(object):
 
     def debug(self, msg):
         v = self.cfg.verbose
-        if v == "trace" or v == "debug":
+        if v in ["trace", "debug"]:
             print(msg)
 
     def info(self, msg):
         v = self.cfg.verbose
-        if v == "trace" or v == "debug" or v == "info":
+        if v in ["trace", "debug", "info"]:
             print(msg)
 
 class ConfigHelper(object):
@@ -143,9 +143,8 @@ class ConfigHelper(object):
         if self.index > self.argv_len - 1:
             return default
         if self.argv[self.index] == command:
-            val = True
             self.index += 1
-            return val
+            return True
         return default
     
     def read_value(self, command, default):
@@ -169,12 +168,12 @@ class ConfigHelper(object):
     #todo improve this poop
     def __init__(self, argv):
         self.index = 2 #after file
-        self.argv = argv 
+        self.argv = argv
         self.argv_len = len(argv)
 
         if argv[1] == '-h':
             self.show_help = True
-        
+
         prev_index = self.index
         while self.index < len(self.argv):
             self.show_help = self.read_bool('-h', self.show_help)
@@ -210,7 +209,10 @@ class ConfigHelper(object):
                 self.index += 1
             prev_index = self.index
 
-        if (self.subdir != '') and not (self.subdir.endswith('/') or self.subdir.endswith('\\')):
+        if not (
+            self.subdir == ''
+            or (self.subdir.endswith('/') or self.subdir.endswith('\\'))
+        ):
             self.subdir += '/'
 
     def __str__(self):
@@ -226,8 +228,8 @@ class Cr32Helper(object):
         self.cfg = cfg
 
     def get_crc32(self, fname):
-        buf_size = 0x8000
         with open(fname, 'rb') as file:
+            buf_size = 0x8000
             buf = file.read(buf_size)
             crc32 = 0
             while len(buf) > 0:
@@ -322,7 +324,7 @@ class TxtpMaker(object):
                 return True
         if (cfg.include_regex != "" and self.stream_name != ""):
             p = re.compile(cfg.include_regex)
-            if (p.match(self.stream_name) == None):
+            if p.match(self.stream_name) is None:
                 return True
 
         return False
@@ -377,10 +379,7 @@ class TxtpMaker(object):
         outname += '.txtp'
 
         if cfg.overwrite_rename and os.path.exists(outname):
-            if outname in cfg.rename_map:
-                rename_count = cfg.rename_map[outname]
-            else:
-                rename_count = 0
+            rename_count = cfg.rename_map[outname] if outname in cfg.rename_map else 0
             cfg.rename_map[outname] = rename_count + 1
             outname = outname.replace(".txtp", "_{}.txtp".format(rename_count))
 
