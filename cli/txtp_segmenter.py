@@ -23,8 +23,7 @@ def parse():
         "%(prog)s files/*.ogg -f .+(a|all)[.]ogg$\n"
         "- find all .ogg in files except those that end with 'a.ogg' or 'all.ogg'\n"
         "%(prog)s files/*.ogg -f .+(00[01])[.]ogg$\n"
-        "- find all .ogg in files that end with '0.ogg' or '1.ogg'\n"
-    )
+        "- find all .ogg in files that end with '0.ogg' or '1.ogg'\n")
 
     parser = argparse.ArgumentParser(
         description=description,
@@ -32,26 +31,32 @@ def parse():
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("files", help="files to match")
+    parser.add_argument("-n",
+                        "--name",
+                        help="generated txtp name (adapts 'files' by default)")
+    parser.add_argument("-f",
+                        "--filter",
+                        help="filter matched files with regex and keep rest")
     parser.add_argument(
-        "-n", "--name", help="generated txtp name (adapts 'files' by default)"
-    )
-    parser.add_argument(
-        "-f", "--filter", help="filter matched files with regex and keep rest"
-    )
-    parser.add_argument(
-        "-i", "--include", help="include matched files with regex and ignore rest"
-    )
+        "-i",
+        "--include",
+        help="include matched files with regex and ignore rest")
     parser.add_argument(
         "-s",
         "--single",
         help="generate single files per list match",
         action="store_true",
     )
-    parser.add_argument(
-        "-l", "--list", help="list only results and don't write", action="store_true"
-    )
-    parser.add_argument("-cls", "--command-loop-start", help="sets loop start segment")
-    parser.add_argument("-cle", "--command-loop-end", help="sets loop end segment")
+    parser.add_argument("-l",
+                        "--list",
+                        help="list only results and don't write",
+                        action="store_true")
+    parser.add_argument("-cls",
+                        "--command-loop-start",
+                        help="sets loop start segment")
+    parser.add_argument("-cle",
+                        "--command-loop-end",
+                        help="sets loop end segment")
     parser.add_argument("-cv", "--command-volume", help="sets volume")
     parser.add_argument("-c", "--command", help="sets any command (free text)")
 
@@ -149,11 +154,14 @@ def main():
             for segment in segments:
                 ftxtp.write(segment + "\n")
             if args.command_loop_start:
-                ftxtp.write("loop_start_segment = " + args.command_loop_start + "\n")
+                ftxtp.write("loop_start_segment = " + args.command_loop_start +
+                            "\n")
             if args.command_loop_end:
-                ftxtp.write("loop_end_segment = " + args.command_loop_end + "\n")
+                ftxtp.write("loop_end_segment = " + args.command_loop_end +
+                            "\n")
             if args.command_volume:
-                ftxtp.write("commands = #@volume " + args.command_volume + "\n")
+                ftxtp.write("commands = #@volume " + args.command_volume +
+                            "\n")
             if args.command:
                 ftxtp.write(args.command.replace("\\n", "\n") + "\n")
 

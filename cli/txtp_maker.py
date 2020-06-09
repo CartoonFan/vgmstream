@@ -63,8 +63,7 @@ def print_help(appname):
         " -fni (regex): filter by subsong name, include files that match\n"
         " -fne (regex): filter by subsong name, exclude files that match\n"
         " -v (name): verbose level (off|trace|debug|info, default: info)\n"
-        " -h N: show this help\n"
-    )
+        " -h N: show this help\n")
 
 
 # ########################################################################### #
@@ -84,13 +83,11 @@ def find_files(dir, pattern, recursive):
 
 def make_cmd(cfg, fname_in, fname_out, target_subsong):
     if cfg.test_dupes:
-        cmd = '{} -s {} -i -o "{}" "{}"'.format(
-            cfg.cli, target_subsong, fname_out, fname_in
-        )
+        cmd = '{} -s {} -i -o "{}" "{}"'.format(cfg.cli, target_subsong,
+                                                fname_out, fname_in)
     else:
-        cmd = '{} -s {} -m -i -o "{}" "{}"'.format(
-            cfg.cli, target_subsong, fname_out, fname_in
-        )
+        cmd = '{} -s {} -m -i -o "{}" "{}"'.format(cfg.cli, target_subsong,
+                                                   fname_out, fname_in)
     return cmd
 
 
@@ -208,9 +205,12 @@ class ConfigHelper(object):
             self.overwrite_rename = self.read_bool("-O", self.overwrite_rename)
             self.layers = self.read_int("-l", self.layers)
 
-            self.use_internal_name = self.read_bool("-in", self.use_internal_name)
-            self.use_internal_ext = self.read_bool("-ie", self.use_internal_ext)
-            self.use_internal_index = self.read_bool("-ii", self.use_internal_index)
+            self.use_internal_name = self.read_bool("-in",
+                                                    self.use_internal_name)
+            self.use_internal_ext = self.read_bool("-ie",
+                                                   self.use_internal_ext)
+            self.use_internal_index = self.read_bool("-ii",
+                                                     self.use_internal_index)
 
             self.verbose = self.read_string("-v", self.verbose)
 
@@ -218,10 +218,8 @@ class ConfigHelper(object):
                 self.index += 1
             prev_index = self.index
 
-        if not (
-            self.subdir == ""
-            or (self.subdir.endswith("/") or self.subdir.endswith("\\"))
-        ):
+        if not (self.subdir == "" or
+                (self.subdir.endswith("/") or self.subdir.endswith("\\"))):
             self.subdir += "/"
 
     def __str__(self):
@@ -362,10 +360,10 @@ class TxtpMaker(object):
         # remove paths #todo maybe config/replace?
         pos = txt.rfind("\\")
         if pos != -1:
-            txt = txt[pos + 1 :]
+            txt = txt[pos + 1:]
         pos = txt.rfind("/")
         if pos != -1:
-            txt = txt[pos + 1 :]
+            txt = txt[pos + 1:]
         # remove bad chars
         txt = txt.replace("%", "_")
         txt = txt.replace("*", "_")
@@ -388,7 +386,8 @@ class TxtpMaker(object):
         outname += ".txtp"
 
         if cfg.overwrite_rename and os.path.exists(outname):
-            rename_count = cfg.rename_map[outname] if outname in cfg.rename_map else 0
+            rename_count = cfg.rename_map[
+                outname] if outname in cfg.rename_map else 0
             cfg.rename_map[outname] = rename_count + 1
             outname = outname.replace(".txtp", "_{}.txtp".format(rename_count))
 
@@ -519,7 +518,8 @@ def main():
 
         fname_in_base = os.path.basename(fname_in)
 
-        if fname_in.startswith(".\\"):  # skip starting dot for extensionless files
+        if fname_in.startswith(
+                ".\\"):  # skip starting dot for extensionless files
             fname_in = fname_in[2:]
 
         fname_out = ".temp." + fname_in_base + ".wav"
@@ -533,17 +533,10 @@ def main():
                 cmd = make_cmd(cfg, fname_in, fname_out, target_subsong)
                 log.trace("calling: " + cmd)
                 output_b = subprocess.check_output(
-                    cmd, shell=False
-                )  # stderr=subprocess.STDOUT
+                    cmd, shell=False)  # stderr=subprocess.STDOUT
             except subprocess.CalledProcessError as e:
-                log.debug(
-                    "ignoring CLI error in "
-                    + fname_in
-                    + "#"
-                    + str(target_subsong)
-                    + ": "
-                    + e.output
-                )
+                log.debug("ignoring CLI error in " + fname_in + "#" +
+                          str(target_subsong) + ": " + e.output)
                 errors += 1
                 break
 
@@ -566,10 +559,9 @@ def main():
             target_subsong += 1
 
             if target_subsong % 200 == 0:
-                log.info(
-                    "{}/{} subsongs... ".format(target_subsong, maker.stream_count)
-                    + "({} dupes, {} errors)".format(dupes, errors)
-                )
+                log.info("{}/{} subsongs... ".format(target_subsong,
+                                                     maker.stream_count) +
+                         "({} dupes, {} errors)".format(dupes, errors))
 
         if os.path.exists(fname_out):
             os.remove(fname_out)
@@ -578,11 +570,8 @@ def main():
         total_dupes += dupes
         total_errors += errors
 
-    log.info(
-        "done! ({} done, {} dupes, {} errors)".format(
-            total_created, total_dupes, total_errors
-        )
-    )
+    log.info("done! ({} done, {} dupes, {} errors)".format(
+        total_created, total_dupes, total_errors))
 
 
 if __name__ == "__main__":
