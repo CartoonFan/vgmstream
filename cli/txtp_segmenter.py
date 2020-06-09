@@ -27,17 +27,25 @@ def parse():
         "- find all .ogg in files that end with '0.ogg' or '1.ogg'\n"
     )
 
-    parser = argparse.ArgumentParser(description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("files", help="files to match")
-    parser.add_argument("-n","--name", help="generated txtp name (adapts 'files' by default)")
-    parser.add_argument("-f","--filter", help="filter matched files with regex and keep rest")
-    parser.add_argument("-i","--include", help="include matched files with regex and ignore rest")
-    parser.add_argument("-s","--single", help="generate single files per list match", action='store_true')
-    parser.add_argument("-l","--list", help="list only results and don't write", action='store_true')
-    parser.add_argument("-cls","--command-loop-start", help="sets loop start segment")
-    parser.add_argument("-cle","--command-loop-end", help="sets loop end segment")
-    parser.add_argument("-cv","--command-volume", help="sets volume")
-    parser.add_argument("-c","--command", help="sets any command (free text)")
+    parser.add_argument(
+        "-n", "--name", help="generated txtp name (adapts 'files' by default)")
+    parser.add_argument(
+        "-f", "--filter", help="filter matched files with regex and keep rest")
+    parser.add_argument(
+        "-i", "--include", help="include matched files with regex and ignore rest")
+    parser.add_argument(
+        "-s", "--single", help="generate single files per list match", action='store_true')
+    parser.add_argument(
+        "-l", "--list", help="list only results and don't write", action='store_true')
+    parser.add_argument("-cls", "--command-loop-start",
+                        help="sets loop start segment")
+    parser.add_argument("-cle", "--command-loop-end",
+                        help="sets loop end segment")
+    parser.add_argument("-cv", "--command-volume", help="sets volume")
+    parser.add_argument("-c", "--command", help="sets any command (free text)")
 
     return parser.parse_args()
 
@@ -63,10 +71,11 @@ def is_file_ok(args, glob_file):
 
     return True
 
+
 def get_txtp_name(args, segment):
     txtp_name = ''
-    
-    if   args.name:
+
+    if args.name:
         txtp_name = args.name
 
     elif args.single:
@@ -87,7 +96,8 @@ def get_txtp_name(args, segment):
         txtp_name += ".txtp"
     return txtp_name
 
-def main(): 
+
+def main():
     args = parse()
 
     # get target files
@@ -103,19 +113,18 @@ def main():
         if args.single:
             name = get_txtp_name(args, glob_file)
             segments = [glob_file]
-            files.append( (name,segments) )
+            files.append((name, segments))
 
         else:
             segments.append(glob_file)
 
     if not args.single:
         name = get_txtp_name(args, '')
-        files.append( (name,segments) )
+        files.append((name, segments))
 
     if not (files and segments):
         print("no files found")
         exit()
-
 
     # list info
     for name, segments in files:
@@ -128,15 +137,18 @@ def main():
 
     # write resulting files
     for name, segments in files:
-        with open(name,"w+") as ftxtp:
+        with open(name, "w+") as ftxtp:
             for segment in segments:
                 ftxtp.write(segment + "\n")
             if args.command_loop_start:
-                ftxtp.write("loop_start_segment = " + args.command_loop_start + "\n")
+                ftxtp.write("loop_start_segment = " +
+                            args.command_loop_start + "\n")
             if args.command_loop_end:
-                ftxtp.write("loop_end_segment = " + args.command_loop_end + "\n")
+                ftxtp.write("loop_end_segment = " +
+                            args.command_loop_end + "\n")
             if args.command_volume:
-                ftxtp.write("commands = #@volume " + args.command_volume + "\n")
+                ftxtp.write("commands = #@volume " +
+                            args.command_volume + "\n")
             if args.command:
                 ftxtp.write(args.command.replace("\\n", "\n") + "\n")
 

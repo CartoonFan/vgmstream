@@ -13,6 +13,7 @@ import re
 import sys
 import fnmatch
 
+
 def print_usage(appname):
     print("Usage: {} (filename) [options]".format(appname)+"\n"
           "\n"
@@ -33,6 +34,7 @@ def print_usage(appname):
           "{} * -r -fss 1".format(appname)+"\n"
           "   all files in subdirs with at least 1 subsong (ignoring formats without them)\n"
           )
+
 
 def print_help(appname):
     print("Options:\n"
@@ -66,6 +68,7 @@ def print_help(appname):
 
 # ########################################################################### #
 
+
 def find_files(dir, pattern, recursive):
     files = []
     for root, dirnames, filenames in os.walk(dir):
@@ -74,15 +77,19 @@ def find_files(dir, pattern, recursive):
 
         if not recursive:
             break
-            
+
     return files
+
 
 def make_cmd(cfg, fname_in, fname_out, target_subsong):
     if (cfg.test_dupes):
-        cmd = "{} -s {} -i -o \"{}\" \"{}\"".format(cfg.cli, target_subsong, fname_out, fname_in)
+        cmd = "{} -s {} -i -o \"{}\" \"{}\"".format(
+            cfg.cli, target_subsong, fname_out, fname_in)
     else:
-        cmd = "{} -s {} -m -i -o \"{}\" \"{}\"".format(cfg.cli, target_subsong, fname_out, fname_in)
+        cmd = "{} -s {} -m -i -o \"{}\" \"{}\"".format(
+            cfg.cli, target_subsong, fname_out, fname_in)
     return cmd
+
 
 class LogHelper(object):
 
@@ -103,6 +110,7 @@ class LogHelper(object):
         v = self.cfg.verbose
         if v in ["trace", "debug", "info"]:
             print(msg)
+
 
 class ConfigHelper(object):
     show_help = False
@@ -138,7 +146,6 @@ class ConfigHelper(object):
     argv_len = 0
     index = 0
 
-
     def read_bool(self, command, default):
         if self.index > self.argv_len - 1:
             return default
@@ -146,7 +153,7 @@ class ConfigHelper(object):
             self.index += 1
             return True
         return default
-    
+
     def read_value(self, command, default):
         if self.index > self.argv_len - 2:
             return default
@@ -165,9 +172,9 @@ class ConfigHelper(object):
     def read_float(self, command, default):
         return float(self.read_value(command, default))
 
-    #todo improve this poop
+    # todo improve this poop
     def __init__(self, argv):
-        self.index = 2 #after file
+        self.index = 2  # after file
         self.argv = argv
         self.argv_len = len(argv)
 
@@ -199,9 +206,12 @@ class ConfigHelper(object):
             self.overwrite_rename = self.read_bool('-O', self.overwrite_rename)
             self.layers = self.read_int('-l', self.layers)
 
-            self.use_internal_name = self.read_bool('-in', self.use_internal_name)
-            self.use_internal_ext = self.read_bool('-ie', self.use_internal_ext)
-            self.use_internal_index = self.read_bool('-ii', self.use_internal_index)
+            self.use_internal_name = self.read_bool(
+                '-in', self.use_internal_name)
+            self.use_internal_ext = self.read_bool(
+                '-ie', self.use_internal_ext)
+            self.use_internal_index = self.read_bool(
+                '-ii', self.use_internal_index)
 
             self.verbose = self.read_string('-v', self.verbose)
 
@@ -223,7 +233,7 @@ class Cr32Helper(object):
     crc32_map = {}
     dupe = False
     cfg = None
-    
+
     def __init__(self, cfg):
         self.cfg = cfg
 
@@ -235,7 +245,7 @@ class Cr32Helper(object):
             while len(buf) > 0:
                 crc32 = zlib.crc32(buf, crc32)
                 buf = file.read(buf_size)
-        return crc32 & 0xFFFFFFFF 
+        return crc32 & 0xFFFFFFFF
 
     def update(self, fname):
         cfg = self.cfg
@@ -246,7 +256,7 @@ class Cr32Helper(object):
         if not os.path.exists(fname):
             return
 
-        crc32_str = format(self.get_crc32(fname),'08x')
+        crc32_str = format(self.get_crc32(fname), '08x')
         if (crc32_str in self.crc32_map):
             self.dupe = True
             return
@@ -271,7 +281,7 @@ class TxtpMaker(object):
         self.cfg = cfg
         self.log = log
 
-        self.output = str(output_b).replace("\\r","").replace("\\n","\n")
+        self.output = str(output_b).replace("\\r", "").replace("\\n", "\n")
         self.channels = self.get_value("channels: ")
         self.sample_rate = self.get_value("sample rate: ")
         self.num_samples = self.get_value("stream total samples: ")
@@ -298,26 +308,26 @@ class TxtpMaker(object):
     def get_value(self, str):
         res = self.get_string(str)
         if (res == ''):
-           return 0;
+            return 0
         return int(res)
 
     def is_ignorable(self):
         cfg = self.cfg
 
         if (self.channels < cfg.min_channels):
-            return True;
+            return True
         if (cfg.max_channels > 0 and self.channels > cfg.max_channels):
-            return True;
+            return True
         if (self.sample_rate < cfg.min_sample_rate):
-            return True;
+            return True
         if (cfg.max_sample_rate > 0 and self.sample_rate > cfg.max_sample_rate):
-            return True;
+            return True
         if (self.stream_seconds < cfg.min_seconds):
-            return True;
+            return True
         if (cfg.max_seconds > 0 and self.stream_seconds > cfg.max_seconds):
-            return True;
+            return True
         if (self.stream_count < cfg.min_subsongs):
-            return True;
+            return True
         if (cfg.exclude_regex != "" and self.stream_name != ""):
             p = re.compile(cfg.exclude_regex)
             if (p.match(self.stream_name) != None):
@@ -337,7 +347,7 @@ class TxtpMaker(object):
         loops = cfg.layers + 1
         if layer + cfg.layers > self.channels:
             loops = self.channels - cfg.layers
-        for ch in range(1,loops):
+        for ch in range(1, loops):
             mask += str(layer+ch) + ','
 
         mask = mask[:-1]
@@ -366,13 +376,13 @@ class TxtpMaker(object):
         txt = txt.replace("|", "_")
         txt = txt.replace("<", "_")
         txt = txt.replace(">", "_")
-    
+
         if not cfg.use_internal_ext:
             pos = txt.rfind(".")
             if (pos != -1):
                 txt = txt[:pos]
         return txt
-        
+
     def write(self, outname, line):
         cfg = self.cfg
 
@@ -385,7 +395,7 @@ class TxtpMaker(object):
 
         if not cfg.overwrite and os.path.exists(outname):
             raise ValueError('TXTP exists in path: ' + outname)
-        ftxtp = open(outname,"w+")
+        ftxtp = open(outname, "w+")
         if line != '':
             ftxtp.write(line)
         ftxtp.close()
@@ -433,22 +443,22 @@ class TxtpMaker(object):
             else:
                 if cfg.base_name != '':
                     fname_base = os.path.basename(fname_path)
-                    pos = fname_base.rfind(".") #remove ext
+                    pos = fname_base.rfind(".")  # remove ext
                     if (pos != -1 and pos > 1):
                         fname_base = fname_base[:pos]
-                        
+
                     internal_name = self.stream_name
-                
+
                     txt = cfg.base_name
-                    txt = txt.replace("{filename}",fname_base)
-                    txt = txt.replace("{subsong}",index)
-                    txt = txt.replace("{internal-name}",internal_name)
+                    txt = txt.replace("{filename}", fname_base)
+                    txt = txt.replace("{subsong}", index)
+                    txt = txt.replace("{internal-name}", internal_name)
 
                     outname = "{}".format(txt)
 
                 else:
                     txt = fname_path
-                    pos = txt.rfind(".") #remove ext
+                    pos = txt.rfind(".")  # remove ext
                     if (pos != -1 and pos > 1):
                         txt = txt[:pos]
 
@@ -481,6 +491,7 @@ class TxtpMaker(object):
 
 # ########################################################################### #
 
+
 def main():
     appname = os.path.basename(sys.argv[0])
     if (len(sys.argv) <= 1):
@@ -505,12 +516,12 @@ def main():
         fname_in_clean = fname_in.replace("\\", "/")
         if fname_in_clean.startswith("./"):
             fname_in_clean = fname_in_clean[2:]
-           
+
         fname_in_base = os.path.basename(fname_in)
-        
-        if fname_in.startswith(".\\"): #skip starting dot for extensionless files
+
+        if fname_in.startswith(".\\"):  # skip starting dot for extensionless files
             fname_in = fname_in[2:]
-        
+
         fname_out = ".temp." + fname_in_base + ".wav"
         created = 0
         dupes = 0
@@ -521,9 +532,11 @@ def main():
             try:
                 cmd = make_cmd(cfg, fname_in, fname_out, target_subsong)
                 log.trace("calling: " + cmd)
-                output_b = subprocess.check_output(cmd, shell=False) #stderr=subprocess.STDOUT
+                output_b = subprocess.check_output(
+                    cmd, shell=False)  # stderr=subprocess.STDOUT
             except subprocess.CalledProcessError as e:
-                log.debug("ignoring CLI error in " + fname_in + "#"+str(target_subsong)+": " + e.output)
+                log.debug("ignoring CLI error in " + fname_in +
+                          "#"+str(target_subsong)+": " + e.output)
                 errors += 1
                 break
 
@@ -546,9 +559,9 @@ def main():
             target_subsong += 1
 
             if target_subsong % 200 == 0:
-                log.info("{}/{} subsongs... ".format(target_subsong, maker.stream_count) + 
-                          "({} dupes, {} errors)".format(dupes, errors)
-                          )
+                log.info("{}/{} subsongs... ".format(target_subsong, maker.stream_count) +
+                         "({} dupes, {} errors)".format(dupes, errors)
+                         )
 
         if os.path.exists(fname_out):
             os.remove(fname_out)
@@ -557,8 +570,9 @@ def main():
         total_dupes += dupes
         total_errors += errors
 
+    log.info("done! ({} done, {} dupes, {} errors)".format(
+        total_created, total_dupes, total_errors))
 
-    log.info("done! ({} done, {} dupes, {} errors)".format(total_created, total_dupes, total_errors))
-    
+
 if __name__ == "__main__":
     main()
