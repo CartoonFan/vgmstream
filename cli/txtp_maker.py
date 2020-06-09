@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-
 # ########################################################################### #
 # TXTP MAKER
 # ########################################################################### #
-
 from __future__ import division
 
 import fnmatch
-import os
 import os.path
 import re
 import subprocess
