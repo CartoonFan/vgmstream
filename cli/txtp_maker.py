@@ -5,13 +5,14 @@
 # ########################################################################### #
 
 from __future__ import division
-import subprocess
-import zlib
-import os.path
-import os
-import re
-import sys
+
 import fnmatch
+import os
+import os.path
+import re
+import subprocess
+import sys
+import zlib
 
 
 def print_usage(appname):
