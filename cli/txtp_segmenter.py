@@ -58,7 +58,7 @@ def is_file_ok(args, glob_file):
     if args.include:
         filename_test = os.path.basename(glob_file)
         p = re.compile(args.include)
-        if p.match(filename_test) == None:
+        if p.match(filename_test) is None:
             return False
 
     return True

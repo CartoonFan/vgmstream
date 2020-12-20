@@ -105,8 +105,8 @@ class Cr32Helper(object):
         self.last_dupe = False
 
     def get_crc32(self, filename):
-        buf_size = 0x8000
         with open(filename, 'rb') as file:
+            buf_size = 0x8000
             buf = file.read(buf_size)
             crc32 = 0
             while len(buf) > 0:
@@ -252,21 +252,16 @@ class TxtpMaker(object):
 
         cfg = self.cfg
         if cfg.overwrite_rename and os.path.exists(outname):
-            if outname in self.rename_map:
-                rename_count = self.rename_map[outname]
-            else:
-                rename_count = 0
+            rename_count = self.rename_map[outname] if outname in self.rename_map else 0
             self.rename_map[outname] = rename_count + 1
             outname = outname.replace(".txtp", "_%08i.txtp" % (rename_count))
 
         if not cfg.overwrite and os.path.exists(outname):
             raise ValueError('TXTP exists in path: ' + outname)
 
-        ftxtp = open(outname,"w+")
-        if line:
-            ftxtp.write(line)
-        ftxtp.close()
-
+        with open(outname,"w+") as ftxtp:
+            if line:
+                ftxtp.write(line)
         log.debug("created: " + outname)
         return
         
@@ -331,12 +326,8 @@ class TxtpMaker(object):
                 # print optional info like "<text__{cmd}__>" only if value in {cmd} exists
                 optionals = pattern1.findall(txt)
                 for optional in optionals:
-                    has_values = False
                     cmds = pattern2.findall(optional)
-                    for cmd in cmds:
-                        if cmd in replaces and replaces[cmd] is not None:
-                            has_values = True
-                            break
+                    has_values = any(cmd in replaces and replaces[cmd] is not None for cmd in cmds)
                     if has_values: #leave text there (cmds will be replaced later)
                         txt = txt.replace('<%s>' % optional, optional, 1)
                     else:
@@ -366,10 +357,8 @@ class TxtpMaker(object):
                 line += "#" + index
 
             if cfg.layers and cfg.layers < self.channels:
-                done = 0
-                for layer in range(0, self.channels, cfg.layers):
+                for done, layer in enumerate(range(0, self.channels, cfg.layers)):
                     sub = chr(ord('a') + done)
-                    done += 1
                     mask = self._get_stream_mask(layer)
                     self._write(outname + sub, line + mask)
                     total_done += 1
@@ -415,10 +404,15 @@ class App(object):
 
     def _make_cmd(self, filename_in, filename_out, target_subsong):
         if self.cfg.test_dupes:
-            cmd = "%s -s %s -i -o \"%s\" \"%s\"" % (self.cfg.cli, target_subsong, filename_out, filename_in)
+            return "%s -s %s -i -o \"%s\" \"%s\"" % (
+                self.cfg.cli,
+                target_subsong,
+                filename_out,
+                filename_in,
+            )
+
         else:
-            cmd = "%s -s %s -m -i -O \"%s\"" % (self.cfg.cli, target_subsong, filename_in)
-        return cmd
+            return "%s -s %s -m -i -O \"%s\"" % (self.cfg.cli, target_subsong, filename_in)
 
     def _find_files(self, dir, pattern):
         if os.path.isfile(pattern):
