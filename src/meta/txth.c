@@ -39,6 +39,7 @@ typedef enum {
     TGC = 29,           /* Tiger Game.com 4-bit ADPCM */
     ASF = 30,           /* Argonaut ASF 4-bit ADPCM */
     EAXA = 31,          /* Electronic Arts EA-XA 4-bit ADPCM v1 */
+    OKI4S = 32,         /* OKI ADPCM with 16-bit output (unlike OKI/VOX/Dialogic ADPCM's 12-bit) */
 } txth_type;
 
 typedef enum { DEFAULT, NEGATIVE, POSITIVE, INVERTED } txth_loop_t;
@@ -95,7 +96,7 @@ typedef struct {
 
     int target_subsong;
     uint32_t subsong_count;
-    uint32_t subsong_offset;
+    uint32_t subsong_spacing;
 
     uint32_t name_offset_set;
     uint32_t name_offset;
@@ -226,6 +227,7 @@ VGMSTREAM* init_vgmstream_txth(STREAMFILE* sf) {
         case PCM4:       coding = coding_PCM4; break;
         case PCM4_U:     coding = coding_PCM4_U; break;
         case OKI16:      coding = coding_OKI16; break;
+        case OKI4S:      coding = coding_OKI4S; break;
         case TGC:        coding = coding_TGC; break;
         case ASF:        coding = coding_ASF; break;
         case EAXA:       coding = coding_EA_XA; break;
@@ -337,6 +339,7 @@ VGMSTREAM* init_vgmstream_txth(STREAMFILE* sf) {
             break;
 
         case coding_OKI16:
+        case coding_OKI4S:
             vgmstream->layout_type = layout_none;
             break;
 
@@ -346,14 +349,14 @@ VGMSTREAM* init_vgmstream_txth(STREAMFILE* sf) {
             break;
 
         case coding_EA_XA: /* from 'raw' modes in sx.exe [Harry Potter and the Chamber of Secrets (PC)] */
-            if (vgmstream->channels == 1 || txth.codec_mode == 1) { /* mono/interleave */
+            if (txth.codec_mode == 1) { /* mono interleave */
                 coding = coding_EA_XA_int;
                 vgmstream->layout_type = layout_interleave;
                 vgmstream->interleave_block_size = txth.interleave;
                 vgmstream->interleave_last_block_size = txth.interleave_last;
-            } else { /* stereo */
+            } else { /* mono/stereo */
                 if (vgmstream->channels > 2)
-                    goto fail; /* only 2ch is known */
+                    goto fail; /* only 1ch and 2ch are known */
 
                 vgmstream->layout_type = layout_none;
             }
@@ -579,7 +582,7 @@ fail:
 static VGMSTREAM* init_subfile(txth_header* txth) {
     VGMSTREAM* vgmstream = NULL;
     char extension[PATH_LIMIT];
-    STREAMFILE* streamSubfile = NULL;
+    STREAMFILE* sf_sub = NULL;
 
 
     if (txth->subfile_size == 0) {
@@ -604,11 +607,25 @@ static VGMSTREAM* init_subfile(txth_header* txth) {
     strcpy(extension, "subfile_txth.");
     strcat(extension, txth->subfile_extension);
 
-    streamSubfile = setup_subfile_streamfile(txth->sf_body, txth->subfile_offset, txth->subfile_size, extension);
-    if (!streamSubfile) goto fail;
+    sf_sub = setup_subfile_streamfile(txth->sf_body, txth->subfile_offset, txth->subfile_size, extension);
+    if (!sf_sub) goto fail;
 
-    vgmstream = init_vgmstream_from_STREAMFILE(streamSubfile);
-    if (!vgmstream) goto fail;
+    sf_sub->stream_index = txth->sf->stream_index;
+
+    vgmstream = init_vgmstream_from_STREAMFILE(sf_sub);
+    if (!vgmstream) {
+        /* In case of subfiles with subsongs pass subsong N by default (ex. subfile is a .fsb with N subsongs).
+         * But if the subfile is a single-subsong subfile (ex. subfile is a .fsb with 1 subsong) try again
+         * without passing index (as it would fail first trying to open subsong N). */
+        if (sf_sub->stream_index > 1) {
+            sf_sub->stream_index = 0;
+            vgmstream = init_vgmstream_from_STREAMFILE(sf_sub);
+            if (!vgmstream) goto fail;
+        }
+        else {
+            goto fail;
+        }
+    }
 
     /* apply some fields */
     if (txth->sample_rate)
@@ -643,11 +660,11 @@ static VGMSTREAM* init_subfile(txth_header* txth) {
     //    txth->loop_flag = vgmstream->loop_flag;
 
 
-    close_streamfile(streamSubfile);
+    close_streamfile(sf_sub);
     return vgmstream;
 
 fail:
-    close_streamfile(streamSubfile);
+    close_streamfile(sf_sub);
     close_vgmstream(vgmstream);
     return NULL;
 }
@@ -870,6 +887,7 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
         else if (is_string(val,"PCM4"))         txth->codec = PCM4;
         else if (is_string(val,"PCM4_U"))       txth->codec = PCM4_U;
         else if (is_string(val,"OKI16"))        txth->codec = OKI16;
+        else if (is_string(val,"OKI4S"))        txth->codec = OKI4S;
         else if (is_string(val,"AAC"))          txth->codec = AAC;
         else if (is_string(val,"TGC"))          txth->codec = TGC;
         else if (is_string(val,"GCOM_ADPCM"))   txth->codec = TGC;
@@ -1015,7 +1033,7 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
                 txth->num_samples = get_bytes_to_samples(txth, txth->num_samples * (txth->interleave*txth->channels));
         }
     }
-    else if (is_string(key,"loop_start_sample")) {
+    else if (is_string(key,"loop_start_sample") || is_string(key,"loop_start")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->loop_start_sample)) goto fail;
         if (txth->sample_type==1)
             txth->loop_start_sample = get_bytes_to_samples(txth, txth->loop_start_sample);
@@ -1024,7 +1042,7 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
         if (txth->loop_adjust)
             txth->loop_start_sample += txth->loop_adjust;
     }
-    else if (is_string(key,"loop_end_sample")) {
+    else if (is_string(key,"loop_end_sample") || is_string(key,"loop_end")) {
         if (is_string(val,"data_size")) {
             txth->loop_end_sample = get_bytes_to_samples(txth, txth->data_size);
         }
@@ -1096,8 +1114,8 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
         if (!parse_num(txth->sf_head,txth,val, &txth->coef_offset)) goto fail;
         /* special adjustments */
         txth->coef_offset += txth->base_offset;
-        if (txth->subsong_offset)
-            txth->coef_offset += txth->subsong_offset * (txth->target_subsong - 1);
+        if (txth->subsong_spacing)
+            txth->coef_offset += txth->subsong_spacing * (txth->target_subsong - 1);
     }
     else if (is_string(key,"coef_spacing")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->coef_spacing)) goto fail;
@@ -1123,8 +1141,8 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
         txth->hist_set = 1;
         /* special adjustment */
         txth->hist_offset += txth->hist_offset;
-        if (txth->subsong_offset)
-            txth->hist_offset += txth->subsong_offset * (txth->target_subsong - 1);
+        if (txth->subsong_spacing)
+            txth->hist_offset += txth->subsong_spacing * (txth->target_subsong - 1);
     }
     else if (is_string(key,"hist_spacing")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->hist_spacing)) goto fail;
@@ -1141,16 +1159,23 @@ static int parse_keyval(STREAMFILE* sf_, txth_header* txth, const char * key, ch
     else if (is_string(key,"subsong_count")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->subsong_count)) goto fail;
     }
-    else if (is_string(key,"subsong_offset")) {
-        if (!parse_num(txth->sf_head,txth,val, &txth->subsong_offset)) goto fail;
+    else if (is_string(key,"subsong_spacing") || is_string(key,"subsong_offset")) {
+        if (!parse_num(txth->sf_head,txth,val, &txth->subsong_spacing)) goto fail;
     }
     else if (is_string(key,"name_offset")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->name_offset)) goto fail;
         txth->name_offset_set = 1;
         /* special adjustment */
         txth->name_offset += txth->base_offset;
-        if (txth->subsong_offset)
-            txth->name_offset += txth->subsong_offset * (txth->target_subsong - 1);
+        if (txth->subsong_spacing)
+            txth->name_offset += txth->subsong_spacing * (txth->target_subsong - 1);
+    }
+    else if (is_string(key,"name_offset_absolute")) {
+        if (!parse_num(txth->sf_head,txth,val, &txth->name_offset)) goto fail;
+        txth->name_offset_set = 1;
+        /* special adjustment */
+        txth->name_offset += txth->base_offset;
+        /* unlike the above this is meant for reads that point to somewhere in the file, regardless subsong number */
     }
     else if (is_string(key,"name_size")) {
         if (!parse_num(txth->sf_head,txth,val, &txth->name_size)) goto fail;
@@ -1515,8 +1540,8 @@ static int parse_name_table(txth_header* txth, char * name_list) {
 
         //;VGM_LOG("TXTH: compare name '%s'\n", key);
         /* parse values if key (name) matches default ("") or filename with/without extension */
-        if (key[0]=='\0' 
-                || is_string_match(filename, key) 
+        if (key[0]=='\0'
+                || is_string_match(filename, key)
                 || is_string_match(basename, key)
                 || is_string_match(fullname, key)) {
             int n;
@@ -1559,7 +1584,7 @@ static int parse_num(STREAMFILE* sf, txth_header* txth, const char * val, uint32
     uint32_t value_div = txth->value_div;
     uint32_t value_add = txth->value_add;
     uint32_t value_sub = txth->value_sub;
-    uint32_t subsong_offset = txth->subsong_offset;
+    uint32_t subsong_spacing = txth->subsong_spacing;
 
     char op = ' ';
     int brackets = 0;
@@ -1624,8 +1649,8 @@ static int parse_num(STREAMFILE* sf, txth_header* txth, const char * val, uint32
             else if (!(ed1 == 'L' && ed2 == 'E'))
                 goto fail;
 
-            if (subsong_offset)
-                offset = offset + subsong_offset * (txth->target_subsong - 1);
+            if (subsong_spacing)
+                offset = offset + subsong_spacing * (txth->target_subsong - 1);
 
             switch(size) {
                 case 1: value = (uint8_t)read_8bit(offset,sf); break;
@@ -1652,9 +1677,12 @@ static int parse_num(STREAMFILE* sf, txth_header* txth, const char * val, uint32
             else if ((n = is_string_field(val,"data_size")))            value = txth->data_size;
             else if ((n = is_string_field(val,"num_samples")))          value = txth->num_samples;
             else if ((n = is_string_field(val,"loop_start_sample")))    value = txth->loop_start_sample;
+            else if ((n = is_string_field(val,"loop_start")))           value = txth->loop_start_sample;
             else if ((n = is_string_field(val,"loop_end_sample")))      value = txth->loop_end_sample;
+            else if ((n = is_string_field(val,"loop_end")))             value = txth->loop_end_sample;
             else if ((n = is_string_field(val,"subsong_count")))        value = txth->subsong_count;
-            else if ((n = is_string_field(val,"subsong_offset")))       value = txth->subsong_offset;
+            else if ((n = is_string_field(val,"subsong_spacing")))      value = txth->subsong_spacing;
+            else if ((n = is_string_field(val,"subsong_offset")))       value = txth->subsong_spacing;
             else if ((n = is_string_field(val,"subfile_offset")))       value = txth->subfile_offset;
             else if ((n = is_string_field(val,"subfile_size")))         value = txth->subfile_size;
             else if ((n = is_string_field(val,"base_offset")))          value = txth->base_offset;
@@ -1778,6 +1806,7 @@ static int get_bytes_to_samples(txth_header* txth, uint32_t bytes) {
             return yamaha_bytes_to_samples(bytes, txth->channels);
         case PCFX:
         case OKI16:
+        case OKI4S:
             return oki_bytes_to_samples(bytes, txth->channels);
 
         /* untested */

@@ -67,6 +67,11 @@ void put_32bitBE(uint8_t* buf, int32_t i);
 #define put_u32le put_32bitLE
 #define put_u16be put_16bitBE
 #define put_u32be put_32bitBE
+#define put_s8 put_8bit
+#define put_s16le put_16bitLE
+#define put_s32le put_32bitLE
+#define put_s16be put_16bitBE
+#define put_s32be put_32bitBE
 
 
 /* signed nibbles come up a lot */
@@ -91,6 +96,10 @@ static inline int clamp16(int32_t val) {
     if (val > 32767) return 32767;
     else if (val < -32768) return -32768;
     else return val;
+}
+
+static inline const uint32_t get_id32be(const char* s) {
+    return (uint32_t)(s[0] << 24) | (s[1] << 16) | (s[2] << 8) | (s[3] << 0);
 }
 
 /* less common functions, no need to inline */
