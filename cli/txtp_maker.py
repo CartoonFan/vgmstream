@@ -18,9 +18,7 @@ import logging as log
 
 class Cli(object):
     def _parse(self):
-        description = (
-            "Makes TXTP from files in folders"
-        )
+        description = "Makes TXTP from files in folders"
         epilog = (
             "examples:\n"
             "  %(prog)s bgm.fsb -in -fcm 2 -fms 5.0\n"
@@ -34,62 +32,123 @@ class Cli(object):
             "  %(prog)s * -r -fss 1\n"
             "  - make .txtp for all files in subdirs with at least 1 subsong\n"
             "    (ignores formats without subsongs)\n\n"
-            "  %(prog)s *.fsb -n \"{fn}<__{ss}>< [{in}]>\" -z 4 -o\n"
+            '  %(prog)s *.fsb -n "{fn}<__{ss}>< [{in}]>" -z 4 -o\n'
             "  - make .txtp for all fsb, adding subsongs and stream name if they exist\n\n"
         )
 
         p = argparse.ArgumentParser(
-            description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
+            description=description,
+            epilog=epilog,
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
+        p.add_argument("files", help="Files to get (wildcards work)", nargs="+")
         p.add_argument(
-            'files', help="Files to get (wildcards work)", nargs='+')
-        p.add_argument('-r',  dest='recursive',
-                       help="Create .txtp in base folder from data in subfolders", action='store_true')
-        p.add_argument('-c',  dest='cli',
-                       help="Set path to CLI (default: auto)")
-        p.add_argument('-d',  dest='subdir',
-                       help="Set subdir inside .txtp (where file will reside)")
-        p.add_argument('-n',  dest='base_name', help=("Define (name).txtp, that can be formatted using:\n"
-                                                      "- {filename}|{fn}=filename without extension\n"
-                                                      "- {subsong}|{ss}=subsong number)\n"
-                                                      "- {internal-name}|{in}=internal stream name\n"
-                                                      "- {if}=internal name or filename if not found\n"
-                                                      "* may be inside <...> for conditional text\n"))
-        p.add_argument('-z',  dest='zero_fill',
-                       help="Zero-fill subsong number (default: auto per subsongs)", type=int)
-        p.add_argument('-ie', dest='no_internal_ext',
-                       help="Remove internal name's extension if any", action='store_true')
-        p.add_argument('-m',  dest='mini_txtp',
-                       help="Create mini-txtp", action='store_true')
-        p.add_argument('-o',  dest='overwrite',
-                       help="Overwrite existing .txtp\n(beware when using with internal names alone)", action='store_true')
-        p.add_argument('-O',  dest='overwrite_rename',
-                       help="Rename rather than overwriting", action='store_true')
-        p.add_argument('-l',  dest='layers',
-                       help="Create .txtp per subsong layers, every N channels", type=int)
-        p.add_argument('-fd', dest='test_dupes',
-                       help="Skip .txtp that point to duplicate streams (slower)", action='store_true')
-        p.add_argument('-fcm', dest='min_channels',
-                       help="Filter by min channels", type=int)
-        p.add_argument('-fcM', dest='max_channels',
-                       help="Filter by max channels", type=int)
-        p.add_argument('-frm', dest='min_sample_rate',
-                       help="Filter by min sample rate", type=int)
-        p.add_argument('-frM', dest='max_sample_rate',
-                       help="Filter by max sample rate", type=int)
-        p.add_argument('-fsm', dest='min_seconds',
-                       help="Filter by min seconds (N.N)", type=float)
-        p.add_argument('-fsM', dest='max_seconds',
-                       help="Filter by max seconds (N.N)", type=float)
-        p.add_argument('-fss', dest='min_subsongs',
-                       help="Filter min subsongs\n(1 filters formats incapable of subsongs)", type=int)
-        p.add_argument('-fni', dest='include_regex',
-                       help="Filter by REGEX including matches of subsong name")
-        p.add_argument('-fne', dest='exclude_regex',
-                       help="Filter by REGEX excluding matches of subsong name")
-        p.add_argument('-nsc', dest='no_semicolon',
-                       help="Remove semicolon names (for songs with multinames)", action='store_true')
-        p.add_argument('-v', dest='log_level',
-                       help="Verbose log level (off|debug|info, default: info)", default='info')
+            "-r",
+            dest="recursive",
+            help="Create .txtp in base folder from data in subfolders",
+            action="store_true",
+        )
+        p.add_argument("-c", dest="cli", help="Set path to CLI (default: auto)")
+        p.add_argument(
+            "-d", dest="subdir", help="Set subdir inside .txtp (where file will reside)"
+        )
+        p.add_argument(
+            "-n",
+            dest="base_name",
+            help=(
+                "Define (name).txtp, that can be formatted using:\n"
+                "- {filename}|{fn}=filename without extension\n"
+                "- {subsong}|{ss}=subsong number)\n"
+                "- {internal-name}|{in}=internal stream name\n"
+                "- {if}=internal name or filename if not found\n"
+                "* may be inside <...> for conditional text\n"
+            ),
+        )
+        p.add_argument(
+            "-z",
+            dest="zero_fill",
+            help="Zero-fill subsong number (default: auto per subsongs)",
+            type=int,
+        )
+        p.add_argument(
+            "-ie",
+            dest="no_internal_ext",
+            help="Remove internal name's extension if any",
+            action="store_true",
+        )
+        p.add_argument(
+            "-m", dest="mini_txtp", help="Create mini-txtp", action="store_true"
+        )
+        p.add_argument(
+            "-o",
+            dest="overwrite",
+            help="Overwrite existing .txtp\n(beware when using with internal names alone)",
+            action="store_true",
+        )
+        p.add_argument(
+            "-O",
+            dest="overwrite_rename",
+            help="Rename rather than overwriting",
+            action="store_true",
+        )
+        p.add_argument(
+            "-l",
+            dest="layers",
+            help="Create .txtp per subsong layers, every N channels",
+            type=int,
+        )
+        p.add_argument(
+            "-fd",
+            dest="test_dupes",
+            help="Skip .txtp that point to duplicate streams (slower)",
+            action="store_true",
+        )
+        p.add_argument(
+            "-fcm", dest="min_channels", help="Filter by min channels", type=int
+        )
+        p.add_argument(
+            "-fcM", dest="max_channels", help="Filter by max channels", type=int
+        )
+        p.add_argument(
+            "-frm", dest="min_sample_rate", help="Filter by min sample rate", type=int
+        )
+        p.add_argument(
+            "-frM", dest="max_sample_rate", help="Filter by max sample rate", type=int
+        )
+        p.add_argument(
+            "-fsm", dest="min_seconds", help="Filter by min seconds (N.N)", type=float
+        )
+        p.add_argument(
+            "-fsM", dest="max_seconds", help="Filter by max seconds (N.N)", type=float
+        )
+        p.add_argument(
+            "-fss",
+            dest="min_subsongs",
+            help="Filter min subsongs\n(1 filters formats incapable of subsongs)",
+            type=int,
+        )
+        p.add_argument(
+            "-fni",
+            dest="include_regex",
+            help="Filter by REGEX including matches of subsong name",
+        )
+        p.add_argument(
+            "-fne",
+            dest="exclude_regex",
+            help="Filter by REGEX excluding matches of subsong name",
+        )
+        p.add_argument(
+            "-nsc",
+            dest="no_semicolon",
+            help="Remove semicolon names (for songs with multinames)",
+            action="store_true",
+        )
+        p.add_argument(
+            "-v",
+            dest="log_level",
+            help="Verbose log level (off|debug|info, default: info)",
+            default="info",
+        )
         return p.parse_args()
 
     def start(self):
@@ -98,6 +157,7 @@ class Cli(object):
             return
         Logger(args).setup_cli()
         App(args).start()
+
 
 # ******************************************************************************
 
@@ -109,31 +169,32 @@ class _GuiLogHandler(log.Handler):
 
     def emit(self, message):
         msg = self.format(message)
-        self._txt.config(state='normal')
-        self._txt.insert('end', msg + '\n')
-        self._txt.config(state='disabled')
+        self._txt.config(state="normal")
+        self._txt.insert("end", msg + "\n")
+        self._txt.config(state="disabled")
 
 
 class Logger(object):
     def __init__(self, cfg):
         levels = {
-            'info': log.INFO,
-            'debug': log.DEBUG,
+            "info": log.INFO,
+            "debug": log.DEBUG,
         }
         self.level = levels.get(cfg.log_level, log.ERROR)
 
     def setup_cli(self):
-        log.basicConfig(level=self.level, format='%(message)s')
+        log.basicConfig(level=self.level, format="%(message)s")
 
     def setup_gui(self, txt):
-        log.basicConfig(level=self.level, format='%(message)s',
-                        handlers=[_GuiLogHandler(txt)])
+        log.basicConfig(
+            level=self.level, format="%(message)s", handlers=[_GuiLogHandler(txt)]
+        )
+
 
 # ******************************************************************************
 
 
 class Cr32Helper(object):
-
     def __init__(self, cfg):
         self.cfg = cfg
         self.crc32_map = {}
@@ -141,7 +202,7 @@ class Cr32Helper(object):
 
     def get_crc32(self, filename):
         buf_size = 0x8000
-        with open(filename, 'rb') as file:
+        with open(filename, "rb") as file:
             buf = file.read(buf_size)
             crc32 = 0
             while len(buf) > 0:
@@ -156,8 +217,8 @@ class Cr32Helper(object):
         if not os.path.exists(filename):
             return
 
-        crc32_str = format(self.get_crc32(filename), '08x')
-        if (crc32_str in self.crc32_map):
+        crc32_str = format(self.get_crc32(filename), "08x")
+        if crc32_str in self.crc32_map:
             self.last_dupe = True
             return
         self.crc32_map[crc32_str] = True
@@ -167,13 +228,13 @@ class Cr32Helper(object):
     def is_last_dupe(self):
         return self.last_dupe
 
+
 # ******************************************************************************
 
 # Makes .txtp (usually 1 but may do N) from a CLI output + subsong
 
 
 class TxtpMaker(object):
-
     def __init__(self, cfg, output_b, rename_map):
         self.cfg = cfg
 
@@ -186,7 +247,7 @@ class TxtpMaker(object):
         self.stream_name = self._get_text("stream name: ")
 
         if self.channels <= 0 or self.sample_rate <= 0:
-            raise ValueError('Incorrect command result')
+            raise ValueError("Incorrect command result")
 
         self.stream_seconds = self.num_samples / self.sample_rate
         self.ignorable = self._is_ignorable(cfg)
@@ -197,7 +258,7 @@ class TxtpMaker(object):
 
     def _get_string(self, str, full=False):
         find_pos = self.output.find(str)
-        if (find_pos == -1):
+        if find_pos == -1:
             return None
         cut_pos = find_pos + len(str)
         str_cut = self.output[cut_pos:]
@@ -249,9 +310,9 @@ class TxtpMaker(object):
         else:
             loops = self.cfg.layers + 1
 
-        mask = '#C'
+        mask = "#C"
         for ch in range(1, loops):
-            mask += str(layer + ch) + ','
+            mask += str(layer + ch) + ","
         return mask[:-1]
 
     def _clean_stream_name(self):
@@ -260,17 +321,17 @@ class TxtpMaker(object):
 
         txt = self.stream_name
         # remove paths #todo maybe config/replace?
-        pos = txt.rfind('\\')
+        pos = txt.rfind("\\")
         if pos >= 0:
-            txt = txt[pos+1:]
-        pos = txt.rfind('/')
+            txt = txt[pos + 1 :]
+        pos = txt.rfind("/")
         if pos >= 0:
-            txt = txt[pos+1:]
+            txt = txt[pos + 1 :]
 
         # remove bad chars
-        badchars = ['%', '*', '?', ':', '\"', '|', '<', '>']
+        badchars = ["%", "*", "?", ":", '"', "|", "<", ">"]
         for badchar in badchars:
-            txt = txt.replace(badchar, '_')
+            txt = txt.replace(badchar, "_")
 
         if not self.cfg.no_internal_ext:
             pos = txt.rfind(".")
@@ -285,7 +346,7 @@ class TxtpMaker(object):
         return txt
 
     def _write(self, outname, line):
-        outname += '.txtp'
+        outname += ".txtp"
 
         cfg = self.cfg
         if cfg.overwrite_rename and os.path.exists(outname):
@@ -297,7 +358,7 @@ class TxtpMaker(object):
             outname = outname.replace(".txtp", "_%08i.txtp" % (rename_count))
 
         if not cfg.overwrite and os.path.exists(outname):
-            raise ValueError('TXTP exists in path: ' + outname)
+            raise ValueError("TXTP exists in path: " + outname)
 
         ftxtp = open(outname, "w+")
         if line:
@@ -332,10 +393,10 @@ class TxtpMaker(object):
             if cfg.layers and cfg.layers < self.channels:
                 for layer in range(0, self.channels, cfg.layers):
                     mask = self._get_stream_mask(layer)
-                    self._write(outname + mask, '')
+                    self._write(outname + mask, "")
                     total_done += 1
             else:
-                self._write(outname, '')
+                self._write(outname, "")
                 total_done += 1
 
         else:
@@ -344,7 +405,7 @@ class TxtpMaker(object):
             if pos > 1:
                 filename_base = filename_base[:pos]
 
-            outname = ''
+            outname = ""
             if cfg.base_name:
                 stream_name = self._clean_stream_name()
                 internal_filename = stream_name
@@ -352,13 +413,13 @@ class TxtpMaker(object):
                     internal_filename = filename_base
 
                 replaces = {
-                    'fn': filename_base,
-                    'filename': filename_base,
-                    'ss': index,
-                    'subsong': index,
-                    'in': stream_name,
-                    'internal-name': stream_name,
-                    'if': internal_filename,
+                    "fn": filename_base,
+                    "filename": filename_base,
+                    "ss": index,
+                    "subsong": index,
+                    "in": stream_name,
+                    "internal-name": stream_name,
+                    "if": internal_filename,
                 }
 
                 pattern1 = re.compile(r"<(.+?)>")
@@ -376,9 +437,9 @@ class TxtpMaker(object):
                             break
                     # leave text there (cmds will be replaced later)
                     if has_values:
-                        txt = txt.replace('<%s>' % optional, optional, 1)
+                        txt = txt.replace("<%s>" % optional, optional, 1)
                     else:
-                        txt = txt.replace('<%s>' % optional, '', 1)
+                        txt = txt.replace("<%s>" % optional, "", 1)
 
                 # replace "{cmd}" if cmd exists with its value (non-existent values use '')
                 cmds = pattern2.findall(txt)
@@ -386,8 +447,8 @@ class TxtpMaker(object):
                     if cmd in replaces:
                         value = replaces[cmd]
                         if value is None:
-                            value = ''
-                        txt = txt.replace('{%s}' % cmd, value, 1)
+                            value = ""
+                        txt = txt.replace("{%s}" % cmd, value, 1)
                 outname = "%s" % (txt)
 
             # no name set, or empty results above
@@ -396,7 +457,7 @@ class TxtpMaker(object):
                 if index:
                     outname += "_" + index
 
-            line = ''
+            line = ""
             if cfg.subdir:
                 line += cfg.subdir
             line += filename_clean
@@ -406,7 +467,7 @@ class TxtpMaker(object):
             if cfg.layers and cfg.layers < self.channels:
                 done = 0
                 for layer in range(0, self.channels, cfg.layers):
-                    sub = chr(ord('a') + done)
+                    sub = chr(ord("a") + done)
                     done += 1
                     mask = self._get_stream_mask(layer)
                     self._write(outname + sub, line + mask)
@@ -418,6 +479,7 @@ class TxtpMaker(object):
 
     def has_more_subsongs(self, target_subsong):
         return target_subsong < self.stream_count
+
 
 # ******************************************************************************
 
@@ -433,12 +495,12 @@ class App(object):
         if self.cfg.cli:
             clis.append(self.cfg.cli)
         else:
-            clis.append('vgmstream_cli')
-            clis.append('test.exe')
+            clis.append("vgmstream_cli")
+            clis.append("test.exe")
 
         for cli in clis:
             try:
-                with open(os.devnull, 'wb') as DEVNULL:  # subprocess.STDOUT #py3 only
+                with open(os.devnull, "wb") as DEVNULL:  # subprocess.STDOUT #py3 only
                     cmd = "%s" % (cli)
                     subprocess.check_call(cmd, stdout=DEVNULL, stderr=DEVNULL)
                 self.cfg.cli = cli
@@ -454,11 +516,14 @@ class App(object):
 
     def _make_cmd(self, filename_in, filename_out, target_subsong):
         if self.cfg.test_dupes:
-            cmd = "%s -s %s -i -o \"%s\" \"%s\"" % (
-                self.cfg.cli, target_subsong, filename_out, filename_in)
+            cmd = '%s -s %s -i -o "%s" "%s"' % (
+                self.cfg.cli,
+                target_subsong,
+                filename_out,
+                filename_in,
+            )
         else:
-            cmd = "%s -s %s -m -i -O \"%s\"" % (self.cfg.cli,
-                                                target_subsong, filename_in)
+            cmd = '%s -s %s -m -i -O "%s"' % (self.cfg.cli, target_subsong, filename_in)
         return cmd
 
     def _find_files(self, dir, pattern):
@@ -485,7 +550,7 @@ class App(object):
 
         filenames_in = []
         for filename in self.cfg.files:
-            filenames_in += self._find_files('.', filename)
+            filenames_in += self._find_files(".", filename)
 
         rename_map = {}
 
@@ -510,14 +575,18 @@ class App(object):
             target_subsong = 1
             while True:
                 try:
-                    cmd = self._make_cmd(
-                        filename_in, filename_out, target_subsong)
+                    cmd = self._make_cmd(filename_in, filename_out, target_subsong)
                     log.debug("calling: %s", cmd)
                     output_b = subprocess.check_output(
-                        cmd, shell=False)  # stderr=subprocess.STDOUT
+                        cmd, shell=False
+                    )  # stderr=subprocess.STDOUT
                 except subprocess.CalledProcessError as e:
-                    log.debug("ignoring CLI error in %s #%s: %s",
-                              filename_in, target_subsong, str(e.output))
+                    log.debug(
+                        "ignoring CLI error in %s #%s: %s",
+                        filename_in,
+                        target_subsong,
+                        str(e.output),
+                    )
                     errors += 1
                     break
 
@@ -540,8 +609,13 @@ class App(object):
                 target_subsong += 1
 
                 if target_subsong % 200 == 0:
-                    log.info("%s/%s subsongs... (%s dupes, %s errors)",
-                             target_subsong, maker.stream_count, dupes, errors)
+                    log.info(
+                        "%s/%s subsongs... (%s dupes, %s errors)",
+                        target_subsong,
+                        maker.stream_count,
+                        dupes,
+                        errors,
+                    )
 
             if os.path.exists(filename_out):
                 os.remove(filename_out)
@@ -550,8 +624,12 @@ class App(object):
             total_dupes += dupes
             total_errors += errors
 
-        log.info("done! (%s done, %s dupes, %s errors)",
-                 total_created, total_dupes, total_errors)
+        log.info(
+            "done! (%s done, %s dupes, %s errors)",
+            total_created,
+            total_dupes,
+            total_errors,
+        )
 
 
 if __name__ == "__main__":

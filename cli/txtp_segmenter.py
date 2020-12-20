@@ -28,22 +28,31 @@ def parse():
     )
 
     parser = argparse.ArgumentParser(
-        description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument("files", help="files to match")
     parser.add_argument(
-        "-n", "--name", help="generated txtp name (adapts 'files' by default)")
+        "-n", "--name", help="generated txtp name (adapts 'files' by default)"
+    )
     parser.add_argument(
-        "-f", "--filter", help="filter matched files with regex and keep rest")
+        "-f", "--filter", help="filter matched files with regex and keep rest"
+    )
     parser.add_argument(
-        "-i", "--include", help="include matched files with regex and ignore rest")
+        "-i", "--include", help="include matched files with regex and ignore rest"
+    )
     parser.add_argument(
-        "-s", "--single", help="generate single files per list match", action='store_true')
+        "-s",
+        "--single",
+        help="generate single files per list match",
+        action="store_true",
+    )
     parser.add_argument(
-        "-l", "--list", help="list only results and don't write", action='store_true')
-    parser.add_argument("-cls", "--command-loop-start",
-                        help="sets loop start segment")
-    parser.add_argument("-cle", "--command-loop-end",
-                        help="sets loop end segment")
+        "-l", "--list", help="list only results and don't write", action="store_true"
+    )
+    parser.add_argument("-cls", "--command-loop-start", help="sets loop start segment")
+    parser.add_argument("-cle", "--command-loop-end", help="sets loop end segment")
     parser.add_argument("-cv", "--command-volume", help="sets volume")
     parser.add_argument("-c", "--command", help="sets any command (free text)")
 
@@ -73,7 +82,7 @@ def is_file_ok(args, glob_file):
 
 
 def get_txtp_name(args, segment):
-    txtp_name = ''
+    txtp_name = ""
 
     if args.name:
         txtp_name = args.name
@@ -84,13 +93,13 @@ def get_txtp_name(args, segment):
     else:
         txtp_name = os.path.splitext(os.path.basename(args.files))[0]
 
-        txtp_name = txtp_name.replace('*', '')
-        txtp_name = txtp_name.replace('?', '')
+        txtp_name = txtp_name.replace("*", "")
+        txtp_name = txtp_name.replace("?", "")
 
-        if txtp_name.endswith('_'):
+        if txtp_name.endswith("_"):
             txtp_name = txtp_name[:-1]
-        if txtp_name == '':
-            txtp_name = 'bgm'
+        if txtp_name == "":
+            txtp_name = "bgm"
 
     if not txtp_name.endswith(".txtp"):
         txtp_name += ".txtp"
@@ -119,7 +128,7 @@ def main():
             segments.append(glob_file)
 
     if not args.single:
-        name = get_txtp_name(args, '')
+        name = get_txtp_name(args, "")
         files.append((name, segments))
 
     if not files or not segments:
@@ -141,14 +150,11 @@ def main():
             for segment in segments:
                 ftxtp.write(segment + "\n")
             if args.command_loop_start:
-                ftxtp.write("loop_start_segment = " +
-                            args.command_loop_start + "\n")
+                ftxtp.write("loop_start_segment = " + args.command_loop_start + "\n")
             if args.command_loop_end:
-                ftxtp.write("loop_end_segment = " +
-                            args.command_loop_end + "\n")
+                ftxtp.write("loop_end_segment = " + args.command_loop_end + "\n")
             if args.command_volume:
-                ftxtp.write("commands = #@volume " +
-                            args.command_volume + "\n")
+                ftxtp.write("commands = #@volume " + args.command_volume + "\n")
             if args.command:
                 ftxtp.write(args.command.replace("\\n", "\n") + "\n")
 
