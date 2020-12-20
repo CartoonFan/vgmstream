@@ -1,10 +1,10 @@
 # !/usr/bin/python
 
-import os
-import sys
-import glob
 import argparse
+import glob
+import os
 import re
+import sys
 
 
 def parse():

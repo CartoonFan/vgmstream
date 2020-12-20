@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import division
+
 import argparse
-import subprocess
-import zlib
-import os
-import re
-import sys
 import fnmatch
 import logging as log
+import os
+import re
+import subprocess
+import sys
+import zlib
 
 # ******************************************************************************
 # TXTP MAKER
