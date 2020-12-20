@@ -49,7 +49,7 @@ The following can be used in place of `(value)` for `(key) = (value)` commands.
   * `$1|2|3|4`: value has size of 8/16/24/32 bit (optional, defaults to 4)
   * Example: `@0x10:BE$2` means `get big endian 16b value at 0x10`
 - `(field)`: uses current value of some fields. Accepted strings:
-  - `interleave, interleave_last, channels, sample_rate, start_offset, data_size, num_samples, loop_start_sample,  loop_end_sample, subsong_count, subsong_offset, subfile_offset, subfile_size, base_offset, name_valueX`
+  - `interleave, interleave_last, channels, sample_rate, start_offset, data_size, num_samples, loop_start_sample, loop_end_sample, subsong_count, subsong_spacing, subfile_offset, subfile_size, base_offset, name_valueX`
 - `(other)`: other special values for certain keys, described per key
 
 
@@ -140,6 +140,8 @@ as explained below, but often will use default values. Accepted codec strings:
 #   * Variation with modified encoding
 # - OKI16          OKI ADPCM with 16-bit output (not VOX/Dialogic 12-bit)
 #   * For rare PS2 games (Sweet Legacy, Hooligan)
+# - OKI4S          OKI ADPCM with 16-bit output and adjusted tables
+#   * For later Konami rhythm games
 # - AAC            Advanced Audio Coding (raw without .mp4)
 #   * For some 3DS games and many iOS games
 #   * Should set skip_samples (around 1024 but varies)
@@ -147,6 +149,8 @@ as explained below, but often will use default values. Accepted codec strings:
 #   * For Tiger Game.com
 # - ASF            Argonaut ASF ADPCM
 #   * For rare Argonaut games [Croc (SAT)]
+# - EAXA           Electronic Arts EA-XA ADPCM
+#   * For rare EA games [Harry Potter and the Chamber of Secrets (PC)]
 codec = (codec string)
 ```
 
@@ -155,7 +159,7 @@ Changes the behavior of some codecs:
 ```
 # - NGC_DSP: 0=normal interleave, 1=byte interleave, 2=no interleave
 # - XMA1|XMA2: 0=dual multichannel (2ch xN), 1=single multichannel (1ch xN)
-# - XBOX: 0=standard (mono or stereo interleave), 1=force mono interleave mode
+# - XBOX|EAXA: 0=standard (mono or stereo interleave), 1=force mono interleave mode
 # - PCFX: 0=standard, 1='buggy encoder' mode, 2/3=same as 0/1 but with double volume
 # - PCM4|PCM4_U: 0=low nibble first, 1=high nibble first
 # - others: ignored
@@ -254,8 +258,12 @@ sample_type = samples|bytes|blocks
 ```
 
 #### SAMPLE VALUES [REQUIRED (num_samples)]
+Those tell vgmstream how long the song is. Define loop points for the track to repeat at those points (if plugin is configured to loop).
+
+You can use `loop_start` and `loop_end` instead as aliases of `loop_start_sample` and `loop_end_sample` (no difference).
+
 Special values:
-- `data_size`: automatically converts bytes-to-samples
+- `data_size`: automatically converts bytes-to-samples (a few codecs don't allow this)
 ```
 num_samples         = (value)|data_size
 loop_start_sample   = (value)
@@ -266,15 +274,16 @@ loop_end_sample     = (value)|data_size
 Force loop on or off, as loop start/end may be defined but not used. If not set, by default it loops when loop_end_sample is defined and less than num_samples.
 
 Special values:
-- auto: tries to autodetect loop points for PS-ADPCM data using data loop flags.
+- `auto`: tries to autodetect loop points for PS-ADPCM data using data loop flags.
 
 Sometimes games give loop flags different meaning, so behavior can be tweaked by defining `loop_behavior` before `loop_flag`:
 - `default`: values 0 or 0xFFFF/0xFFFFFFFF (-1) disable looping, but not 0xFF (loop endlessly)
 - `negative`: values 0xFF/0xFFFF/0xFFFFFFFF (-1) enable looping
 - `positive`: values 0xFF/0xFFFF/0xFFFFFFFF (-1) disable looping
+- `inverted`: values not 0 disable looping
 
 ```
-loop_negative = default|negative|positive
+loop_behavior = default|negative|positive|inverted
 loop_flag = (value)|auto
 ```
 
@@ -344,12 +353,14 @@ body_file = (filename)|*.(extension)|null
 ```
 
 #### SUBSONGS
-Sets the number of subsongs in the file, adjusting reads per subsong N: `value = @(offset) + subsong_offset*N`. number/constants values aren't adjusted though.
+Sets the number of subsongs in the file, adjusting reads per subsong N: `value = @(offset) + subsong_spacing*N`. Number/constants values aren't adjusted though.
+
+Instead of `subsong_spacing` you can use `subsong_offset` (older alias).
 
 Mainly for bigfiles with consecutive headers per subsong, set subsong_offset to 0 when done as it affects any reads. The current subsong number is handled externally by plugins or TXTP.
 ```
 subsong_count = (value)
-subsong_offset = (value)
+subsong_spacing = (value)
 ```
 
 #### NAMES
@@ -357,10 +368,11 @@ Sets the name of the stream, most useful when used with subsongs. TXTH will read
 
 `name_size` defaults to 0, which reads until null-terminator or a non-ascii character is found.
 
-`name_offset` can be a (number) value, but being an offset it's also adjusted by subsong_offset.
+`name_offset` can be a (number) value, but being an offset it's also adjusted by `subsong_spacing`. If you need to point to some absolute offset (for example a subsong pointings to name in another table) that doesn't depend on subsong (must not be changed by `subsong_spacing`), use `name_offset_absolute`.
 ```
 name_offset = (value)
 name_size = (value)
+name_offset_absolute = (value)
 ```
 
 #### SUBFILES
@@ -412,12 +424,12 @@ Inside the table you define lines mapping a filename to a bunch of values, in th
 (filename1): (value)
 ...
 # may put multiple comma-separated values, spaces are ok
-(filenameN)    : (value1), (...)   ,   (valueN)
+(filenameN)    : (value1), (...)   ,   (valueN)  # inline comments too
 
 # put no name before the : to set default values
  : (value1), (...), (valueN)
 ```
-Then I'll find your current file name, and you can then reference its numbers from the list as a `name_value` field, like `base_offset = name_value`, `start_offset = 0x1000 + name_value1`, `interleave = name_value5`, etc. `(filename)` can be with or without extension (like `bgm01.vag` or just `bgm01`), and if the file's name isn't found it'll use default values, and if those aren't defined you'll get 0 instead. Being "values" they can be use math or offsets too.
+Then I'll find your current file name, and you can then reference its numbers from the list as a `name_value` field, like `base_offset = name_value`, `start_offset = 0x1000 + name_value1`, `interleave = name_value5`, etc. `(filename)` can be with or without extension (like `bgm01.vag` or just `bgm01`), and if the file's name isn't found it'll use default values, and if those aren't defined you'll get 0 instead. Being "values" they can use math or offsets too (`bgm05: 5*0x010`).
 
 You can use wildcards to match multiple names too (it stops on first name that matches), and UTF-8 names should work, case insensitive even.
 ```
@@ -426,13 +438,17 @@ bgm*_M: 1   # 1ch: some files end with _M for mono
 bgm*: 2     # 2ch: all other files, notice order matters
 ```
 
-While you can put anything in the values, this feature is meant to be used to store some number that points to the actual data inside a real multi-header, that could be set with `header_file`. If you need to store many constant values there is good chance it could be done in some better way.
+While you can put anything in the values, this feature is meant to be used to store some number that points to the actual data inside a real multi-header, that could be set with `header_file`. If you feel the need to store many constant values per file, there is good chance it can be done in some better, simpler way.
 
 
 #### BASE OFFSET MODIFIER
-You can set a default offset that affects next `@(offset)` reads making them `@(offset + base_offset)`, for cleaner parsing (particularly interesting when combined with the `name_list`).
+You can set a default offset that affects next `@(offset)` reads making them `@(offset + base_offset)`, for cleaner parsing.
 
-For example instead of `channels = @0x714` you could set `base_offset = 0x710, channels = @0x04`. Set to 0 when you want to disable it.
+This is particularly interesting when combined with offsets to some long value. For example instead of `channels = @0x714` you could set `base_offset = 0x710, channels = @0x04`. Or values from the `name_table`, like `base_offset = name_value, channels = @0x04`.
+
+It also allows parsing formats that set offsets to another offset, by "chaining" `base_offset`. With `base_offset = @0x10` (pointing to `0x40`) then `base_offset = @0x20`, it reads value at `0x60`. Set to 0 when you want to disable/reset the chain: `base_offset = @0x10` then `base_offset = 0` then `base_offset = @0x20` reads value at `0x20`
+
+
 ```
 base_offset = (value)
 ```
@@ -510,7 +526,7 @@ Note that DSP coefs are special in that aren't read immediately, and will use *l
 Values may need to be reset (to 0 or other sensible value) when done. Subsong example:
 ```
 subsong_count = 5
-subsong_offset = 0x20   # there are 5 subsong headers, 0x20 each
+subsong_spacing = 0x20  # there are 5 subsong headers, 0x20 each
 channel_count = @0x10   # reads channels at 0x10+0x20*subsong
 # 1st subsong: 0x10+0x20*0: 0x10
 # 2nd subsong: 0x10+0x20*1: 0x30
@@ -518,7 +534,7 @@ channel_count = @0x10   # reads channels at 0x10+0x20*subsong
 # ...
 start_offset = @0x14    # reads offset within data at 0x14+0x20*subsong
 
-subsong_offset = 0      # reset value
+subsong_spacing = 0     # reset value
 sample_rate = 0x04      # sample rate is the same for all subsongs
 # Nth subsong ch: 0x04+0x00*N: 0x08
 ```
@@ -631,7 +647,7 @@ chunk_count = 26
 
 # after setting chunks (sizes vary when 'dechunking')
 start_offset = 0x00
-padding_size = auto-empty   
+padding_size = auto-empty
 num_samples = data_size
 ```
 
@@ -673,9 +689,9 @@ Some formats read an offset to another part of the file, then another offset, th
 
 You can simulate this chaining multiple `base_offset`
 ```
-base_offset = @0x10                 #sets at 0x1000
-channels    = @0x04                 #reads at 0x1004
-base_offset = base_offset + @0x10   #sets at 0x1000 + 0x200 = 0x1200
+base_offset = @0x10                 #sets current at 0x1000
+channels    = @0x04                 #reads at 0x1004 (base_offset + 0x04)
+base_offset = base_offset + @0x10   #sets current at 0x1000 + 0x200 = 0x1200
 sample_rate = @0x04                 #reads at 0x1204
 ...
 ```
@@ -781,7 +797,7 @@ channels = 2
 
 # subsong headers at 0x1A5A40, entry size 0x14, total 58 * 0x14 = 0x488
 subsong_count     = 58
-subsong_offset    = 0x14
+subsong_spacing   = 0x14
 base_offset       = 0x1A5A40
 
 sample_rate       = @0x00
@@ -844,14 +860,13 @@ JIN002.XAG: 0x168
 JIN003.XAG: 0x180
 ```
 
-
 #### Grandia (PS1) bgm.txth
 ```
 header_file       = GM1.IDX
 body_file         = GM1.STZ
 
 subsong_count     = 394  #last doesn't have size though
-subsong_offset    = 0x04
+subsong_spacing   = 0x04
 
 subfile_offset    = (@0x00 & 0xFFFFF) * 0x800
 subfile_extension = seb
@@ -894,7 +909,6 @@ st_s01_02b.ssd: 6*0x04
 st_s01_02c.ssd: 7*0x04
 ```
 
-
 #### Zack & Wiki (Wii) st_s01_00a.txth
 ```
 #alt from above with untouched folders
@@ -934,10 +948,153 @@ coef_endianness = BE
 # uses wildcards for full paths from plugins
 ```
 
-####  Croc (SAT) .asf.txth
+#### Croc (SAT) .asf.txth
 ```
 codec = ASF
 sample_rate = 22050
 channels = 2
 num_samples = data_size
+```
+
+#### Sega Rally 3 (SAT) ALL_SOUND.txth
+```
+codec             = PCM16LE
+
+header_file       = ALL_AUDIO.sfx
+body_file         = ALL_AUDIO.sfx
+
+#header format
+# 0..0x100: garbage/info?
+# 0x100 table1 offset (points to audio configs w/ floats, etc)
+# 0x104 table1 count
+# 0x108 table2 offset (points to stream offsets for audio configs?)
+# 0x10c table2 count
+
+# 0x110 table3 offset (points to headers)
+# 0x114 table3 count
+# 0x118 table3 offset (points to stream offsets)
+# 0x11c table3 count
+
+
+# read stream header using table3
+subsong_count     = @0x114
+base_offset       = @0x110
+subsong_spacing   = 0xc8
+
+name_offset       = 0x00
+#0xc0: file number
+base_offset       = @0xc4 #absolute jump
+subsong_spacing   = 0     #stop offsetting for next vals
+
+channels          = @0xC0
+sample_rate       = @0xC4
+data_size         = @0xC8 #without header
+num_samples       = data_size
+
+# read stream offset using table4
+base_offset       = 0     #reset current jump
+base_offset       = @0x118
+subsong_spacing   = 0xc8
+
+start_offset      = @0xc4 + 0xc0
+```
+
+#### Sega Rally 3 (PC) EnglishStream.txth
+```
+codec             = PCM16LE
+
+header_file       = EnglishStreamHeader.stm
+body_file         = EnglishStreamData.stm
+
+#header format
+# 0..0x100: garbage/info?
+# 0x100 table1 offset (points to headers)
+# 0x104 table1 count
+# 0x108 table2 offset (points to stream offsets)
+# 0x10c table2 count
+
+
+# read stream header using table1
+subsong_count     = @0x104
+base_offset       = @0x100
+subsong_spacing   = 0xc8
+
+name_offset       = 0x00
+#0xc0: file number
+base_offset       = @0xc4 #absolute jump
+subsong_spacing   = 0     #stop offsetting for next vals
+
+channels          = @0xC0
+sample_rate       = @0xC4
+data_size         = @0xC8 #without header
+num_samples       = data_size
+
+# read stream offset using table1
+base_offset       = 0     #reset current jump
+base_offset       = @0x108
+subsong_spacing   = 0xc8
+
+start_offset      = @0xc4 + 0xc0
+```
+
+#### Starsky & Hutch (PS2) MUSICPS2.WAD.txth
+```
+codec = PSX
+channels = 1
+sample_type = bytes
+
+header_file = MUSICPS2.WAD
+body_file   = MUSICPS2.WAD
+
+subsong_count     = 0xC
+subsong_spacing   = 0x30
+sample_rate       = 32000
+base_offset       = 0x70
+start_offset      = @0x14 + 0x380
+num_samples       = @0x18
+data_size         = num_samples
+loop_flag         = auto
+
+#@0x10 is an absolute offset to another table, that shouldn't be affected by subsong_spacing
+name_offset_absolute = @0x10 + 0x270
+```
+
+#### Fatal Frame (Xbox) .mwa.txth
+```
+#00: MWAV
+#04: flags?
+#08: subsongs
+#0c: data size
+#10: null
+#14: sizes offset
+#18: offsets table
+#1c: offset to tables?
+#20: header offset
+
+subsong_count = @0x08
+
+# size table
+subsong_spacing = 0
+base_offset = 0
+base_offset = @0x14
+subsong_spacing = 0x04
+data_size = @0x00
+
+# offset table
+subsong_spacing = 0
+base_offset = 0
+base_offset = @0x18
+subsong_spacing = 0x04
+start_offset = @0x00
+
+# header (standard "fmt")
+subsong_spacing = 0
+base_offset = 0
+base_offset = @0x20
+channels = @0x02$2
+sample_rate = @0x04
+
+codec = XBOX
+num_samples = data_size
+#todo: there are dummy entries
 ```
