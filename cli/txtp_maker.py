@@ -42,28 +42,30 @@ class Cli(object):
             epilog=epilog,
             formatter_class=argparse.RawTextHelpFormatter,
         )
-        p.add_argument("files", help="Files to get (wildcards work)", nargs="+")
+        p.add_argument("files",
+                       help="Files to get (wildcards work)",
+                       nargs="+")
         p.add_argument(
             "-r",
             dest="recursive",
             help="Create .txtp in base folder from data in subfolders",
             action="store_true",
         )
-        p.add_argument("-c", dest="cli", help="Set path to CLI (default: auto)")
-        p.add_argument(
-            "-d", dest="subdir", help="Set subdir inside .txtp (where file will reside)"
-        )
+        p.add_argument("-c",
+                       dest="cli",
+                       help="Set path to CLI (default: auto)")
+        p.add_argument("-d",
+                       dest="subdir",
+                       help="Set subdir inside .txtp (where file will reside)")
         p.add_argument(
             "-n",
             dest="base_name",
-            help=(
-                "Define (name).txtp, that can be formatted using:\n"
-                "- {filename}|{fn}=filename without extension\n"
-                "- {subsong}|{ss}=subsong number)\n"
-                "- {internal-name}|{in}=internal stream name\n"
-                "- {if}=internal name or filename if not found\n"
-                "* may be inside <...> for conditional text\n"
-            ),
+            help=("Define (name).txtp, that can be formatted using:\n"
+                  "- {filename}|{fn}=filename without extension\n"
+                  "- {subsong}|{ss}=subsong number)\n"
+                  "- {internal-name}|{in}=internal stream name\n"
+                  "- {if}=internal name or filename if not found\n"
+                  "* may be inside <...> for conditional text\n"),
         )
         p.add_argument(
             "-z",
@@ -77,13 +79,15 @@ class Cli(object):
             help="Remove internal name's extension if any",
             action="store_true",
         )
-        p.add_argument(
-            "-m", dest="mini_txtp", help="Create mini-txtp", action="store_true"
-        )
+        p.add_argument("-m",
+                       dest="mini_txtp",
+                       help="Create mini-txtp",
+                       action="store_true")
         p.add_argument(
             "-o",
             dest="overwrite",
-            help="Overwrite existing .txtp\n(beware when using with internal names alone)",
+            help=
+            "Overwrite existing .txtp\n(beware when using with internal names alone)",
             action="store_true",
         )
         p.add_argument(
@@ -104,28 +108,35 @@ class Cli(object):
             help="Skip .txtp that point to duplicate streams (slower)",
             action="store_true",
         )
-        p.add_argument(
-            "-fcm", dest="min_channels", help="Filter by min channels", type=int
-        )
-        p.add_argument(
-            "-fcM", dest="max_channels", help="Filter by max channels", type=int
-        )
-        p.add_argument(
-            "-frm", dest="min_sample_rate", help="Filter by min sample rate", type=int
-        )
-        p.add_argument(
-            "-frM", dest="max_sample_rate", help="Filter by max sample rate", type=int
-        )
-        p.add_argument(
-            "-fsm", dest="min_seconds", help="Filter by min seconds (N.N)", type=float
-        )
-        p.add_argument(
-            "-fsM", dest="max_seconds", help="Filter by max seconds (N.N)", type=float
-        )
+        p.add_argument("-fcm",
+                       dest="min_channels",
+                       help="Filter by min channels",
+                       type=int)
+        p.add_argument("-fcM",
+                       dest="max_channels",
+                       help="Filter by max channels",
+                       type=int)
+        p.add_argument("-frm",
+                       dest="min_sample_rate",
+                       help="Filter by min sample rate",
+                       type=int)
+        p.add_argument("-frM",
+                       dest="max_sample_rate",
+                       help="Filter by max sample rate",
+                       type=int)
+        p.add_argument("-fsm",
+                       dest="min_seconds",
+                       help="Filter by min seconds (N.N)",
+                       type=float)
+        p.add_argument("-fsM",
+                       dest="max_seconds",
+                       help="Filter by max seconds (N.N)",
+                       type=float)
         p.add_argument(
             "-fss",
             dest="min_subsongs",
-            help="Filter min subsongs\n(1 filters formats incapable of subsongs)",
+            help=
+            "Filter min subsongs\n(1 filters formats incapable of subsongs)",
             type=int,
         )
         p.add_argument(
@@ -187,9 +198,9 @@ class Logger(object):
         log.basicConfig(level=self.level, format="%(message)s")
 
     def setup_gui(self, txt):
-        log.basicConfig(
-            level=self.level, format="%(message)s", handlers=[_GuiLogHandler(txt)]
-        )
+        log.basicConfig(level=self.level,
+                        format="%(message)s",
+                        handlers=[_GuiLogHandler(txt)])
 
 
 # ******************************************************************************
@@ -324,10 +335,10 @@ class TxtpMaker(object):
         # remove paths #todo maybe config/replace?
         pos = txt.rfind("\\")
         if pos >= 0:
-            txt = txt[pos + 1 :]
+            txt = txt[pos + 1:]
         pos = txt.rfind("/")
         if pos >= 0:
-            txt = txt[pos + 1 :]
+            txt = txt[pos + 1:]
 
         # remove bad chars
         badchars = ["%", "*", "?", ":", '"', "|", "<", ">"]
@@ -501,7 +512,8 @@ class App(object):
 
         for cli in clis:
             try:
-                with open(os.devnull, "wb") as DEVNULL:  # subprocess.STDOUT #py3 only
+                with open(os.devnull,
+                          "wb") as DEVNULL:  # subprocess.STDOUT #py3 only
                     cmd = "%s" % (cli)
                     subprocess.check_call(cmd, stdout=DEVNULL, stderr=DEVNULL)
                 self.cfg.cli = cli
@@ -524,7 +536,8 @@ class App(object):
                 filename_in,
             )
         else:
-            cmd = '%s -s %s -m -i -O "%s"' % (self.cfg.cli, target_subsong, filename_in)
+            cmd = '%s -s %s -m -i -O "%s"' % (self.cfg.cli, target_subsong,
+                                              filename_in)
         return cmd
 
     def _find_files(self, dir, pattern):
@@ -576,11 +589,11 @@ class App(object):
             target_subsong = 1
             while True:
                 try:
-                    cmd = self._make_cmd(filename_in, filename_out, target_subsong)
+                    cmd = self._make_cmd(filename_in, filename_out,
+                                         target_subsong)
                     log.debug("calling: %s", cmd)
                     output_b = subprocess.check_output(
-                        cmd, shell=False
-                    )  # stderr=subprocess.STDOUT
+                        cmd, shell=False)  # stderr=subprocess.STDOUT
                 except subprocess.CalledProcessError as e:
                     log.debug(
                         "ignoring CLI error in %s #%s: %s",
